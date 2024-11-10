@@ -32,7 +32,14 @@ struct ContentView: View {
             VStack{
                 VStack{
                     if let roomName {
-                        Text("Current Room: \(roomName)").background(.white)
+                        VStack{
+                            Text("Welcome To").font(.caption2)
+                            Text("\(roomName)").bold()
+                        }
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(.blue)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                 }
                 .padding()
