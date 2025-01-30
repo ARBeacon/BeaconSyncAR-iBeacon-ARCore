@@ -17,7 +17,9 @@ class BeaconManager: NSObject, ObservableObject {
     
     override init() {
         super.init()
+        Logger.addLog(label: "Initialize BeaconManager")
         setupLocationManager()
+        Logger.addLog(label: "Fininshed Initialize BeaconManager")
     }
     
     private func setupLocationManager() {

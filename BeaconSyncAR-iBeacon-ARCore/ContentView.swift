@@ -11,7 +11,9 @@ struct ContentView: View {
     @StateObject private var arViewModel: ARViewModel = ARViewModel()
     @StateObject private var roomManager: RoomManager = RoomManager()
     
-    init() {
+    @ObservedObject var logger: Logger = Logger.get()
+    
+    init(logger: Logger? = nil) {
         let arViewModel = ARViewModel()
         let roomManager = RoomManager()
         let cloudAnchorsManager = CloudAnchorsManager(roomManager: roomManager, arViewModel: arViewModel)
@@ -20,6 +22,16 @@ struct ContentView: View {
         
         _arViewModel = StateObject(wrappedValue: arViewModel)
         _roomManager = StateObject(wrappedValue: roomManager)
+        
+        if let logger {
+            logger.addLog(label: "ContentView Initialize", content: "Mocked Logger")
+            _logger = ObservedObject(wrappedValue: logger)
+        }
+        else {
+            let logger = Logger.get()
+            logger.addLog(label: "ContentView Initialize")
+            _logger = ObservedObject(wrappedValue:logger)
+        }
     }
     
     var roomName:String? { roomManager.currentRoom?.name }
@@ -27,30 +39,49 @@ struct ContentView: View {
     var session:ARSession? { arViewModel.sceneView?.session }
     
     var body: some View {
-        ZStack{
-            ARViewContainer(arViewModel: arViewModel).ignoresSafeArea(.all)
-            VStack{
+        NavigationStack {
+            ZStack{
+                ARViewContainer(arViewModel: arViewModel).ignoresSafeArea(.all)
                 VStack{
-                    if let roomName {
-                        VStack{
-                            Text("Welcome To").font(.caption2)
-                            Text("\(roomName)").bold()
+                    VStack{
+                        if let roomName {
+                            VStack{
+                                Text("Welcome To").font(.caption2)
+                                Text("\(roomName)").bold()
+                            }
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .background(.blue)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                         }
-                        .foregroundColor(.white)
-                        .padding(12)
-                        .background(.blue)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
+                    .padding()
+                    Spacer()
                 }
-                .padding()
-                Spacer()
+                
+                VStack{
+                    Spacer()
+                    HStack{
+                        NavigationLink(destination: LogView(logger: logger)) {
+                            Text("Open Log").padding()
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                                .opacity(1)
+                        }.navigationBarTitleDisplayMode(.automatic)
+                    }
+                    
+                }
             }
         }
-        
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        let logger = Logger.sampleLogger()
+        return ContentView(logger: logger)
+    }
 }
+
 

@@ -16,9 +16,11 @@ class CloudAnchorsManager {
     private var currentRoom: Room?
     
     init(roomManager: RoomManager, arViewModel: ARViewModel) {
+        Logger.addLog(label: "Initialize CloudAnchorsManager")
         self.roomManager = roomManager
         self.arViewModel = arViewModel
         setupBindings()
+        Logger.addLog(label: "Fininshed Initialize CloudAnchorsManager")
     }
     
     private func setupBindings() {
@@ -62,10 +64,31 @@ class CloudAnchorsManager {
     }
     
     private func pullAndResloveCloudAnchors(in room: Room) {
+        
+        struct PulledCloudAnchorsIdsLog: Encodable{
+            let cloudAnchorsIds:[String]
+            let room: Room
+        }
+        
+        Logger.addLog(
+            label: "Pulling CloudAnchors Ids from Backend",
+            content: room
+        )
+        
         print("PULLING room: \(room.name)")
         Task{
             do {
                 let cloudAnchorsIds = try await pullCloudAnchorsIds(in: room)
+                
+                Logger.addLog(
+                    label: "Pulled CloudAnchors Ids from Backend",
+                    content:
+                        PulledCloudAnchorsIdsLog(
+                            cloudAnchorsIds: cloudAnchorsIds,
+                            room: room
+                        )
+                )
+                
                 cloudAnchorsIds.forEach { cloudAnchorsId in
                     print("Backend: cloudAnchorsId: \(cloudAnchorsId)")
                     arViewModel.resolveAnchor(cloudAnchorsId)
@@ -78,9 +101,19 @@ class CloudAnchorsManager {
     
     private func uploadCloudAnchorToBackend(_ cloudId: String) async throws {
         
+        struct UploadedCloudAnchorsIdLog: Encodable{
+            let cloudAnchorsId: String
+            let room: Room
+        }
+        
         guard let room = currentRoom else {
             throw NSError(domain: "Room", code: 0, userInfo: [NSLocalizedDescriptionKey: "No Room are avaliable."])
         }
+        
+        Logger.addLog(
+            label: "Uploading CloudAnchors Ids to Backend",
+            content: room
+        )
         
         let urlString = "https://api.fyp.maitree.dev/room/\(room.id.uuidString)/CloudAnchor/new"
         guard let url = URL(string: urlString) else {
@@ -101,6 +134,14 @@ class CloudAnchorsManager {
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw URLError(.badServerResponse)
         }
+        
+        Logger.addLog(
+            label: "Uploaded CloudAnchors Ids to Backend",
+            content: UploadedCloudAnchorsIdLog(
+                cloudAnchorsId: cloudId,
+                room: room
+            )
+        )
         
     }
     

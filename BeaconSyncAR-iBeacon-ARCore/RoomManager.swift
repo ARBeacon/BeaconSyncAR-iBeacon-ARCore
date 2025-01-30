@@ -33,9 +33,13 @@ class RoomManager: ObservableObject {
     private var beaconRoomMap = [IBeaconData: Room?]()
     
     init() {
+        Logger.addLog(label: "Initialize RoomManager")
         self.beaconManager = BeaconManager()
-        beaconManager.startMonitoringBeacon(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")
+        beaconManager.startMonitoringBeacon(
+            uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"
+        )
         setupBindings()
+        Logger.addLog(label: "Fininshed Initialize RoomManager")
     }
     
     private func setupBindings() {
@@ -130,6 +134,7 @@ class RoomManager: ObservableObject {
                 if currentRoom != mostCommonRoom {
                     // Update only nesesary
                     currentRoom = mostCommonRoom
+                    Logger.addLog(label: "Room Update", content: mostCommonRoom)
                 }
             }
         } else {

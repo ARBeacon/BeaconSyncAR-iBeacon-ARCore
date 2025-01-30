@@ -19,16 +19,25 @@ class ARViewModel: NSObject, ObservableObject {
     
     override init() {
         super.init()
+        Logger.addLog(label: "Initialize ARViewModel")
         sceneView = makeARView()
         loadModel()
         setupGestureRecognizer()
         setupGARSession()
+        Logger.addLog(label: "Finished Initialize ARViewModel")
     }
     
-    var defaultConfiguration: ARWorldTrackingConfiguration {
+    public static var defaultConfiguration: ARWorldTrackingConfiguration {
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = .horizontal
         configuration.environmentTexturing = .automatic
+        
+        if let referenceImages = ARReferenceImage.referenceImages(inGroupNamed: "AR Resources", bundle: nil) {
+            print("DEBUG: Found \(referenceImages.count) AR reference images")
+            configuration.detectionImages = referenceImages
+        }
+        
+        
         return configuration
     }
     
@@ -36,7 +45,7 @@ class ARViewModel: NSObject, ObservableObject {
         let sceneView = ARSCNView(frame: .zero)
         sceneView.delegate = self
         sceneView.session.delegate = self
-        sceneView.session.run(defaultConfiguration, options: [.removeExistingAnchors,.resetSceneReconstruction,.resetTracking])
+        sceneView.session.run(ARViewModel.defaultConfiguration, options: [.removeExistingAnchors,.resetSceneReconstruction,.resetTracking])
         return sceneView
     }
     
@@ -49,7 +58,7 @@ extension ARViewModel {
         self.cloudAnchorsManager = manager
     }
     
-    private static func stringFromCloudState(_ cloudState: GARCloudAnchorState) -> String {
+    public static func stringFromCloudState(_ cloudState: GARCloudAnchorState) -> String {
         switch cloudState {
         case .none:
             return "None"
@@ -97,8 +106,37 @@ extension ARViewModel {
     private func hostCloudAnchor(anchor: ARAnchor) {
         guard let garSession = garSession else { return }
         
+        Logger.addLog(
+            label: "Hosting ARAnchor",
+            content:
+                AnchorLog(
+                    name: anchor.name,
+                    identifier: anchor.identifier,
+                    transform: anchor.transform
+                )
+        )
+        
+        struct HostAnchorLog: Encodable{
+            let arAnchor: AnchorLog
+            let cloudId: String?
+            let cloudAnchorState: String
+        }
+        
         do{
             _ = try garSession.hostCloudAnchor(anchor, ttlDays: 1) { [weak self] cloudId, cloudState in
+                Logger.addLog(
+                    label: "Hosted ARAnchor",
+                    content:
+                        HostAnchorLog(
+                            arAnchor:AnchorLog(
+                                name: anchor.name,
+                                identifier: anchor.identifier,
+                                transform: anchor.transform
+                            ),
+                            cloudId: cloudId,
+                            cloudAnchorState: ARViewModel.stringFromCloudState(cloudState)
+                        )
+                )
                 self?.finishHosting(cloudId: cloudId, cloudState: cloudState)
             }
         }catch{
@@ -142,11 +180,20 @@ extension ARViewModel {
             let bunnyAnchor = ARAnchor(name: "bunny", transform: garAnchor.transform)
             sceneView?.session.add(anchor: bunnyAnchor)
             resolvedAnchors[garAnchor.identifier] = bunnyAnchor
+            
+            Logger.addLog(
+                label: "ARCore Update Bunny Anchor",
+                content: AnchorLog(
+                    name: nil,
+                    identifier: garAnchor.identifier,
+                    transform: garAnchor.transform
+                )
+            )
         }
     }
 }
 
-// FeaturePoints
+// FeaturePoints and ARCore updates
 extension ARViewModel: ARSessionDelegate, ARSCNViewDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         self.worldMappingStatus = frame.worldMappingStatus
@@ -176,7 +223,13 @@ extension ARViewModel: ARSessionDelegate, ARSCNViewDelegate {
     }
 }
 
-// Bunny Hit-Test
+struct AnchorLog: Encodable{
+    let name: String?
+    let identifier: UUID
+    let transform: simd_float4x4
+}
+
+// Bunny Hit-Test and Rendering
 extension ARViewModel {
     
     private func placeModel(at raycastResult: ARRaycastResult) {
@@ -186,15 +239,100 @@ extension ARViewModel {
     }
     
     func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
-        guard anchor.name == "bunny",
-              let modelNode = modelNode?.clone() else {
-            return
+        
+        switch anchor {
+        case let imageAnchor as ARImageAnchor:
+            handleImageAnchor(imageAnchor, node: node)
+        case _ where anchor.name == "bunny":
+            handleBunnyAnchor(node: node, anchor: anchor)
+        case _ as ARPlaneAnchor: break
+        default: break
         }
         
-        modelNode.position = SCNVector3Zero
-        modelNode.eulerAngles = SCNVector3(-Double.pi / 2, -Double.pi / 2, 0)
+        func handleImageAnchor(_ imageAnchor: ARImageAnchor, node: SCNNode) {
+            
+            Logger.addLog(
+                label: "ARImageAnchor didAdd",
+                content: AnchorLog(
+                    name: imageAnchor.referenceImage.name,
+                    identifier: imageAnchor.identifier,
+                    transform: imageAnchor.transform
+                )
+            )
+            
+            let planeNode = createPlaneNode(for: imageAnchor)
+            
+            node.addChildNode(planeNode)
+        }
         
-        node.addChildNode(modelNode)
+        func handleBunnyAnchor(node: SCNNode, anchor: ARAnchor) {
+            guard let modelNode = modelNode?.clone() else { return }
+            
+            Logger.addLog(
+                label: "Bunny didAdd (ARKit)",
+                content: AnchorLog(
+                    name: anchor.name,
+                    identifier: anchor.identifier,
+                    transform: anchor.transform
+                )
+            )
+            
+            modelNode.position = SCNVector3Zero
+            modelNode.eulerAngles = SCNVector3(-Double.pi / 2, -Double.pi / 2, 0)
+            
+            node.addChildNode(modelNode)
+        }
+    }
+    
+    func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
+        
+        for anchor in anchors {
+            switch anchor {
+            case let imageAnchor as ARImageAnchor:
+                handleImageAnchor(imageAnchor)
+            case _ where anchor.name == "bunny":
+                handleBunnyAnchor(anchor: anchor)
+            case _ as ARPlaneAnchor: break
+            default: break
+            }
+        }
+        
+        func handleImageAnchor(_ imageAnchor: ARImageAnchor) {
+            Logger.addLog(
+                label: "ARImageAnchor didUpdate",
+                content: AnchorLog(
+                    name: imageAnchor.referenceImage.name,
+                    identifier: imageAnchor.identifier,
+                    transform: imageAnchor.transform)
+            )
+        }
+        
+        func handleBunnyAnchor(anchor: ARAnchor) {
+            Logger.addLog(
+                label: "Bunny didUpdate (ARKit)",
+                content: AnchorLog(
+                    name: anchor.name,
+                    identifier: anchor.identifier,
+                    transform: anchor.transform
+                )
+            )
+        }
+        
+    }
+}
+
+// ImageAnchor
+extension ARViewModel {
+    private func createPlaneNode(for imageAnchor: ARImageAnchor) -> SCNNode {
+        let referenceImage = imageAnchor.referenceImage
+        let plane = SCNPlane(width: referenceImage.physicalSize.width, height: referenceImage.physicalSize.height)
+        
+        let planeNode = SCNNode(geometry: plane)
+        planeNode.eulerAngles.x = -.pi / 2
+        
+        plane.firstMaterial?.diffuse.contents = UIColor.blue.withAlphaComponent(0.8)
+        
+        return planeNode
     }
 }
 
