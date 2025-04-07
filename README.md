@@ -20,7 +20,7 @@ cd BeaconSyncAR-iBeacon-ARCore
 ```bash
 cp BeaconSyncAR-iBeacon-ARCore/Config.xcconfig.example BeaconSyncAR-iBeacon-ARCore/Config.xcconfig
 ```
-Edit the Config.xcconfig file with your Google ARCore API's credentials and your backend endpoint url.
+Edit the Config.xcconfig file with your Google ARCore API's credentials and your [backend](https://github.com/ARBeacon/BeaconSyncAR-api) endpoint url.
 
 3. Run the app:
 
