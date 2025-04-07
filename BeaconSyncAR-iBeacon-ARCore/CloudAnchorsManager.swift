@@ -40,7 +40,7 @@ class CloudAnchorsManager {
     }
     
     private func pullCloudAnchorsIds(in room: Room) async throws -> [String] {
-        let urlString = "https://api.fyp.maitree.dev/room/\(room.id.uuidString)/CloudAnchor/list"
+        let urlString = "\(API_ENDPOINT)/room/\(room.id.uuidString)/CloudAnchor/list"
         guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
         }
@@ -115,7 +115,7 @@ class CloudAnchorsManager {
             content: room
         )
         
-        let urlString = "https://api.fyp.maitree.dev/room/\(room.id.uuidString)/CloudAnchor/new"
+        let urlString = "\(API_ENDPOINT)/room/\(room.id.uuidString)/CloudAnchor/new"
         guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
         }

@@ -62,7 +62,7 @@ class RoomManager: ObservableObject {
     }
     
     private func fetchRoomInfo(for beaconData: IBeaconData) {
-        let url = URL(string: "https://api.fyp.maitree.dev/ibeacon/getRoom")!
+        let url = URL(string: "\(API_ENDPOINT)/ibeacon/getRoom")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         
