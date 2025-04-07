@@ -7,6 +7,7 @@ iOS app for BLE-assisted AR synchronization using Google ARCore's Cloud Anchors.
 ### Prerequisites
 - Xcode 16+
 - iOS device with ARKit support
+- BLE Beacons (see [BeaconScanner](https://github.com/ARBeacon/BeaconScanner) for setup)
 - Running [Google ARCore API Instance](https://console.cloud.google.com/apis/library/arcore)
 
 ### Local Setup
