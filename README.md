@@ -1,6 +1,7 @@
 # BeaconSyncAR-iBeacon-ARCore
-
 iOS app for BLE-assisted AR synchronization using Google ARCore's Cloud Anchors.
+
+![ScreenRecording_03-22-2025 14-29-31_1](https://github.com/user-attachments/assets/a780f33d-ed84-4934-8069-90ea09c7e2c3)
 
 ## 🚀 Quick Start
 
